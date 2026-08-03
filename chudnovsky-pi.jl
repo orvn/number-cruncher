@@ -32,6 +32,10 @@ function π_chud(; digits::Union{Int,Nothing} = 100,
     initial_digits = digits === nothing ? 100 : digits
     setprecision(ceil(Int, initial_digits * log2(10)) + 32)
 
+    if refresh && stream && max_iters === nothing
+        println("streaming indefinitely — ctrl-c to interrupt")
+    end
+
     C = BigFloat(426880) * sqrt(BigFloat(10005))
     S = BigFloat(0)
 
@@ -41,13 +45,17 @@ function π_chud(; digits::Union{Int,Nothing} = 100,
     X = big(1)
     k = 0
     π_current = BigFloat(NaN)
+    t0 = time()
 
     while true
         S += BigFloat(M * L) / BigFloat(X)
         π_current = C / S
 
         if refresh
-            print("\riter=", lpad(k, 6), "  π ≈ ", π_current)
+            elapsed = time() - t0
+            print("\riter=", lpad(k, 6),
+                  "  t=", lpad(string(round(elapsed, digits=2)), 8), "s",
+                  "  π ≈ ", π_current)
         end
 
         k += 1
