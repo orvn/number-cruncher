@@ -75,6 +75,7 @@ function π_chud(; digits::Union{Int,Nothing} = 100,
 end
 
 include("tui.jl")
+include("interrupt.jl")
 
 # usage
 #   π_chud(digits = 200)                                          # silent, returns value
@@ -84,5 +85,11 @@ include("tui.jl")
 #          on_iter = tui_callback(every = 10, show_banner = false))
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    π_chud(stream = true, on_iter = tui_callback(every = 5))
+    π_ref = Ref{BigFloat}(BigFloat(0))
+    tui = tui_callback(every = 5)
+    on_iter = (k, p, e) -> (π_ref[] = p; tui(k, p, e))
+
+    with_graceful_interrupt(on_interrupt = prompt_show(() -> π_ref[], label = "π")) do
+        π_chud(stream = true, on_iter = on_iter)
+    end
 end
