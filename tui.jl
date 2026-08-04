@@ -1,9 +1,20 @@
 # Streaming TUI for π_chud
 #
 # tui_callback(...) returns a closure suitable to pass as `on_iter` to π_chud
-# Rendering is throttled to every N iterations and fits the terminal width:
+# Rendering is throttled to every N iterations and fits the terminal width.
+# Two-line output, redrawn in place:
 #
-#   iter = 1770  t = 3.5s <leading 64> … {aggregate: N digits} … <trailing 256>
+#   iter = 1770  t = 3.5s
+#   π = <leading 32> … {aggregate: N digits} … <trailing 256>
+
+const ANSI_RESET   = "\e[0m"
+const ANSI_DIM     = "\e[2m"
+const ANSI_CYAN    = "\e[36m"     # aggregate (softer)
+const ANSI_BCYAN   = "\e[96m"     # leading + trailing (bright)
+const ANSI_GRAY    = "\e[90m"
+const ANSI_UP_HOME = "\r\e[1A"    # cursor to start of previous line
+
+wrap(s, code) = string(code, s, ANSI_RESET)
 
 function humanize_digits(n::Integer)
     n < 1_000     && return string(n)
@@ -14,43 +25,67 @@ end
 # decimal digits held by a BigFloat at its current precision
 digits_of(x::BigFloat) = floor(Int, precision(x) * log10(BigFloat(2)))
 
+# returns (plain, colored) — plain used for width math, colored for output
 function format_π(π::BigFloat, cols::Int)
     s = string(π)
     total = digits_of(π)
     aggregate = string("{", humanize_digits(total), " digits}")
 
-    # try leading … aggregate … trailing at descending widths
     for (leading_n, trailing_n) in [(32, 256), (32, 128), (24, 96), (16, 64), (12, 32), (8, 16)]
         wanted = (leading_n + 2) + 3 + length(aggregate) + 3 + trailing_n
         if wanted <= cols
-            leading = first(s, leading_n + 2)   # "3." + leading_n digits
+            leading = first(s, leading_n + 2)
             trailing = last(s, trailing_n)
-            return string(leading, " … ", aggregate, " … ", trailing)
+            plain = string(leading, " … ", aggregate, " … ", trailing)
+            colored = string(wrap(leading, ANSI_BCYAN), " ",
+                             wrap("…", ANSI_GRAY), " ",
+                             wrap(aggregate, ANSI_CYAN), " ",
+                             wrap("…", ANSI_GRAY), " ",
+                             wrap(trailing, ANSI_BCYAN))
+            return plain, colored
         end
     end
 
-    # too narrow, drop aggregate chunk
     room = max(cols - 3, 10)
     half = div(room, 2)
-    return string(first(s, half), "…", last(s, room - half))
+    plain = string(first(s, half), "…", last(s, room - half))
+    colored = string(wrap(first(s, half), ANSI_BCYAN),
+                     wrap("…", ANSI_GRAY),
+                     wrap(last(s, room - half), ANSI_BCYAN))
+    return plain, colored
 end
 
-function tui_callback(; every::Int = 1, io::IO = stdout, show_banner::Bool = true)
-    first_call = Ref(true)
+function tui_callback(; every::Int = 1, io::IO = stdout, show_banner::Bool = true, color::Bool = true)
+    first_render = Ref(true)
     return function(k::Int, π_current::BigFloat, elapsed::Float64)
-        if first_call[]
-            show_banner && println(io, "streaming, use ctrl-c to interrupt")
-            first_call[] = false
+        if first_render[] && show_banner
+            println(io, "streaming, use ctrl-c to interrupt")
+            println(io)
         end
         (k != 0 && k % every != 0) && return
 
         cols = displaysize(io)[2]
-        prefix = string("iter = ", k, "  t = ", round(elapsed, digits = 1), "s  ")
-        body = format_π(π_current, max(cols - length(prefix) - 1, 20))
-        line = string(prefix, body)
+        elapsed_s = string(round(elapsed, digits = 1), "s")
 
-        # pad to full width so leftovers from a longer previous line get erased
-        line = rpad(line, cols - 1)
-        print(io, "\r", line)
+        # line 1: iter + t
+        line1_plain = string("iter = ", k, "  t = ", elapsed_s)
+        line1 = color ?
+            string(wrap("iter = ", ANSI_DIM), k, "  ",
+                   wrap("t = ", ANSI_DIM), elapsed_s) :
+            line1_plain
+
+        # line 2: π = <leading> … {aggregate} … <trailing>
+        prefix_plain = "π = "
+        prefix = color ? wrap("π = ", ANSI_DIM) : prefix_plain
+        plain_body, colored_body = format_π(π_current, max(cols - length(prefix_plain) - 1, 20))
+        body = color ? colored_body : plain_body
+
+        pad1 = max(0, cols - 1 - length(line1_plain))
+        pad2 = max(0, cols - 1 - length(prefix_plain) - length(plain_body))
+
+        # move cursor back to line 1 on subsequent renders
+        first_render[] || print(io, ANSI_UP_HOME)
+        print(io, line1, " " ^ pad1, "\n", prefix, body, " " ^ pad2)
+        first_render[] = false
     end
 end
