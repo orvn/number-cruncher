@@ -41,8 +41,8 @@ Both share the same kwarg shape:
 
 ### Files
 
-- `tui.jl` width-aware terminal interface design file. `tui_callback` takes an optional `label` kwarg (default `"π"`) so the second output line renders `<label> = ...`
-- `interrupt.jl` — interruption handler
+- `runtime/tui.jl` width-aware terminal interface design file. `tui_callback` takes an optional `label` kwarg (default `"π"`) so the second output line renders `<label> = ...`
+- `runtime/interrupt.jl` — interruption handler
 
 Example invocation for other calculations
 ```julia

@@ -74,8 +74,8 @@ function π_chud(; digits::Union{Int,Nothing} = 100,
     return π_current
 end
 
-include("tui.jl")
-include("interrupt.jl")
+include("runtime/tui.jl")
+include("runtime/interrupt.jl")
 
 # usage
 #   π_chud(digits = 200)                                          # silent, returns value

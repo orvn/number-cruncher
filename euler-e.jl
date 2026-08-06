@@ -67,8 +67,8 @@ function e_taylor(; digits::Union{Int,Nothing} = 100,
     return e_current
 end
 
-include("tui.jl")
-include("interrupt.jl")
+include("runtime/tui.jl")
+include("runtime/interrupt.jl")
 
 # usage e.g.
 #  e_taylor(digits = 200)
