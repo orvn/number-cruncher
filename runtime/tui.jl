@@ -23,7 +23,7 @@ function humanize_digits(n::Integer)
 end
 
 # decimal digits held by a BigFloat at its current precision
-digits_of(x::BigFloat) = floor(Int, precision(x) * log10(BigFloat(2)))
+digits_of(x::BigFloat) = floor(Int, precision(x) * log10(2))
 
 # returns (plain, colored) — plain used for width math, colored for output
 function format_π(π::BigFloat, cols::Int)
