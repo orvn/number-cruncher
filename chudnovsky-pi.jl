@@ -86,10 +86,16 @@ include("runtime/interrupt.jl")
 
 if abspath(PROGRAM_FILE) == @__FILE__
     π_ref = Ref{BigFloat}(BigFloat(0))
+    k_ref = Ref(0)
+    t_ref = Ref(0.0)
     tui = tui_callback(every = 5)
-    on_iter = (k, p, e) -> (π_ref[] = p; tui(k, p, e))
+    on_iter = (k, p, e) -> (π_ref[] = p; k_ref[] = k; t_ref[] = e; tui(k, p, e))
 
-    with_graceful_interrupt(on_interrupt = prompt_show(() -> π_ref[], label = "π")) do
+    summary = () -> string("iter = ", k_ref[],
+                           "  t = ", round(t_ref[], digits = 2), "s",
+                           "  digits = ", digits_of(π_ref[]))
+
+    with_graceful_interrupt(on_interrupt = prompt_show(() -> π_ref[], label = "π", summary = summary)) do
         π_chud(stream = true, on_iter = on_iter)
     end
 end
