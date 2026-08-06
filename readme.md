@@ -9,7 +9,8 @@ A collection of calculations and proofs on series, especially those that converg
 Assuming Julia is installed, simply call a file like:
 
 ```zsh
-julia chudnovsky-pi.jl
+julia chudnovsky-pi.jl   # π via Chudnovsky
+julia euler-e.jl         # e via Taylor series
 ```
 
 ### Use as a library
@@ -17,28 +18,37 @@ julia chudnovsky-pi.jl
 ```julia
 include("chudnovsky-pi.jl")
 
-π_chud(digits = 200)                                       # silent, returns BigFloat
-π_chud(digits = 500, on_iter = tui_callback(every = 1))    # target accuracy w/ TUI
-π_chud(stream = true, on_iter = tui_callback(every = 10))  # stream forever w/ TUI
-π_chud(stream = true, max_iters = 500)                     # ~7000 digits then stop
+π_chud(digits = 200)
+π_chud(digits = 500, on_iter = tui_callback(every = 1))
+π_chud(stream = true, on_iter = tui_callback(every = 10))
+π_chud(stream = true, max_iters = 500)
 ```
 
-`π_chud` kwargs:
+```julia
+include("euler-e.jl")
+
+e_taylor(digits = 200)                                                   
+e_taylor(digits = 500, on_iter = tui_callback(every = 1, label = "e"))   
+e_taylor(stream = true, on_iter = tui_callback(every = 5, label = "e"))
+```
+
+Both share the same kwarg shape:
 
 - `digits::Int` — target decimal digits (default `100`)
 - `stream::Bool` — keep refining past target (default `false`)
 - `max_iters::Union{Int,Nothing}` — hard cap (default `nothing`)
-- `on_iter::Function` — optional callback `(k, π_current, elapsed_seconds)`
+- `on_iter::Function` — optional callback `(k, value, elapsed_seconds)`
 
 ### Files
 
-- `tui.jl` width-aware terminal interface design file
+- `tui.jl` width-aware terminal interface design file. `tui_callback` takes an optional `label` kwarg (default `"π"`) so the second output line renders `<label> = ...`
 - `interrupt.jl` — interruption handler
 
 Example invocation for other calculations
 ```julia
 val_ref = Ref{BigFloat}(BigFloat(0))
-with_graceful_interrupt(on_interrupt = prompt_show(() -> val_ref[], label = "result")) do
-    my_calc(on_iter = (k, v, t) -> (val_ref[] = v; tui_callback(every = 5)(k, v, t)))
+tui = tui_callback(every = 5, label = "x")
+with_graceful_interrupt(on_interrupt = prompt_show(() -> val_ref[], label = "x")) do
+    my_calc(on_iter = (k, v, t) -> (val_ref[] = v; tui(k, v, t)))
 end
 ```

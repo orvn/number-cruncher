@@ -55,7 +55,7 @@ function format_π(π::BigFloat, cols::Int)
     return plain, colored
 end
 
-function tui_callback(; every::Int = 1, io::IO = stdout, show_banner::Bool = true, color::Bool = true)
+function tui_callback(; every::Int = 1, io::IO = stdout, show_banner::Bool = true, color::Bool = true, label::AbstractString = "π")
     first_render = Ref(true)
     return function(k::Int, π_current::BigFloat, elapsed::Float64)
         if first_render[] && show_banner
@@ -74,9 +74,9 @@ function tui_callback(; every::Int = 1, io::IO = stdout, show_banner::Bool = tru
                    wrap("t = ", ANSI_DIM), elapsed_s) :
             line1_plain
 
-        # line 2: π = <leading> … {aggregate} … <trailing>
-        prefix_plain = "π = "
-        prefix = color ? wrap("π = ", ANSI_DIM) : prefix_plain
+        # line 2: <label> = <leading> … {aggregate} … <trailing>
+        prefix_plain = string(label, " = ")
+        prefix = color ? wrap(prefix_plain, ANSI_DIM) : prefix_plain
         plain_body, colored_body = format_π(π_current, max(cols - length(prefix_plain) - 1, 20))
         body = color ? colored_body : plain_body
 
