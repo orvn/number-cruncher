@@ -11,6 +11,7 @@ Assuming Julia is installed, simply call a file like:
 ```zsh
 julia chudnovsky-pi.jl   # π via Chudnovsky
 julia euler-e.jl         # e via Taylor series
+julia heron-sqrt2.jl     # √2 via Heron's method
 ```
 
 ### Use as a library
@@ -32,7 +33,15 @@ e_taylor(digits = 500, on_iter = tui_callback(every = 1, label = "e"))
 e_taylor(stream = true, on_iter = tui_callback(every = 5, label = "e"))
 ```
 
-Both share the same kwarg shape:
+```julia
+include("heron-sqrt2.jl")
+
+sqrt2_heron(digits = 200)
+sqrt2_heron(digits = 500, on_iter = tui_callback(every = 1, label = "√2"))
+sqrt2_heron(stream = true, on_iter = tui_callback(every = 1, label = "√2"))
+```
+
+These share the same kwarg shape:
 
 - `digits::Int` — target decimal digits (default `100`)
 - `stream::Bool` — keep refining past target (default `false`)
