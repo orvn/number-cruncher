@@ -17,9 +17,11 @@ const ANSI_UP_HOME = "\r\e[1A"    # cursor to start of previous line
 wrap(s, code) = string(code, s, ANSI_RESET)
 
 function humanize_digits(n::Integer)
-    n < 1_000     && return string(n)
-    n < 1_000_000 && return string(round(n / 1_000, digits = 1), "K")
-                     return string(round(n / 1_000_000, digits = 2), "M")
+    n < 1_000             && return string(n)
+    n < 1_000_000         && return string(round(n / 1_000, digits = 1), "K")
+    n < 1_000_000_000     && return string(round(n / 1_000_000, digits = 2), "M")
+    n < 1_000_000_000_000 && return string(round(n / 1_000_000_000, digits = 2), "B")
+                             return string(round(n / 1_000_000_000_000, digits = 2), "T")
 end
 
 # decimal digits held by a BigFloat at its current precision
