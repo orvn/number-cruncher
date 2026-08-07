@@ -28,8 +28,8 @@ function sqrt_newton(n; digits::Union{Int,Nothing} = 100,
         on_iter !== nothing && on_iter(k, x, time() - t0)
         k += 1
 
-        if !stream && k > 1 && x == x_prev
-            break
+        if k > 1 && x == x_prev
+            break # break on perfect square
         end
         if max_iters !== nothing && k > max_iters
             break
