@@ -26,9 +26,16 @@ end
 digits_of(x::BigFloat) = floor(Int, precision(x) * log10(2))
 
 # returns (plain, colored) — plain used for width math, colored for output
+const AGGREGATE_FLOOR = 200  # if below, skip leading/aggregate/trailing structure
+
 function format_π(π::BigFloat, cols::Int)
     s = string(π)
     total = digits_of(π)
+
+    if total < AGGREGATE_FLOOR
+        display = length(s) <= cols ? s : first(s, cols)
+        return display, wrap(display, ANSI_BCYAN)
+    end
     aggregate = string("{", humanize_digits(total), " digits}")
 
     for (leading_n, trailing_n) in [(32, 256), (32, 128), (24, 96), (16, 64), (12, 32), (8, 16)]
