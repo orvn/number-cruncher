@@ -11,7 +11,8 @@ Assuming Julia is installed, simply call a file like:
 ```zsh
 julia chudnovsky-pi.jl   # π via Chudnovsky
 julia euler-e.jl         # e via Taylor series
-julia heron-sqrt2.jl     # √2 via Heron's method
+julia heron-root.jl      # √2 via Heron's method
+julia newton-root.jl     # √n via Newton's method (prompts for n)
 ```
 
 ### Use as a library
@@ -34,11 +35,19 @@ e_taylor(stream = true, on_iter = tui_callback(every = 5, label = "e"))
 ```
 
 ```julia
-include("heron-sqrt2.jl")
+include("heron-root.jl")
 
 sqrt2_heron(digits = 200)
 sqrt2_heron(digits = 500, on_iter = tui_callback(every = 1, label = "√2"))
 sqrt2_heron(stream = true, on_iter = tui_callback(every = 1, label = "√2"))
+```
+
+```julia
+include("newton-root.jl")
+
+sqrt_newton(3, digits = 200)
+sqrt_newton(7, digits = 500, on_iter = tui_callback(every = 1, label = "√7"))
+sqrt_newton(π, stream = true, on_iter = tui_callback(every = 1, label = "√π"))
 ```
 
 These share the same kwarg shape:
