@@ -63,7 +63,6 @@ function e_taylor(; digits::Union{Int,Nothing} = 100,
         end
     end
 
-    on_iter !== nothing && println()
     return e_current
 end
 
@@ -79,14 +78,23 @@ if abspath(PROGRAM_FILE) == @__FILE__
     e_ref = Ref{BigFloat}(BigFloat(0))
     k_ref = Ref(0)
     t_ref = Ref(0.0)
-    tui = tui_callback(every = 5, label = "e")
-    on_iter = (k, v, t) -> (e_ref[] = v; k_ref[] = k; t_ref[] = t; tui(k, v, t))
+    tui_on_iter, stop_tui! = tui_start(every = 5, label = "e")
+    on_iter = (k, v, t) -> (e_ref[] = v; k_ref[] = k; t_ref[] = t; tui_on_iter(k, v, t))
 
     summary = () -> string("iter = ", k_ref[],
                            "  t = ", round(t_ref[], digits = 2), "s",
                            "  digits = ", digits_of(e_ref[]))
 
-    with_graceful_interrupt(on_interrupt = prompt_show(() -> e_ref[], label = "e", summary = summary)) do
-        e_taylor(stream = true, on_iter = on_iter)
+    handler = function()
+        stop_tui!()
+        prompt_show(() -> e_ref[], label = "e", summary = summary)()
+    end
+
+    try
+        with_graceful_interrupt(on_interrupt = handler) do
+            e_taylor(stream = true, on_iter = on_iter)
+        end
+    finally
+        stop_tui!()
     end
 end

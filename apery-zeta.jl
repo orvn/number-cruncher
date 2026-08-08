@@ -51,7 +51,6 @@ function zeta3_apery(; digits::Union{Int,Nothing} = 100,
         end
     end
 
-    on_iter !== nothing && println()
     return ζ_current
 end
 
@@ -67,14 +66,23 @@ if abspath(PROGRAM_FILE) == @__FILE__
     ζ_ref = Ref{BigFloat}(BigFloat(0))
     n_ref = Ref(0)
     t_ref = Ref(0.0)
-    tui = tui_callback(every = 5, label = "ζ(3)")
-    on_iter = (n, v, t) -> (ζ_ref[] = v; n_ref[] = n; t_ref[] = t; tui(n, v, t))
+    tui_on_iter, stop_tui! = tui_start(every = 5, label = "ζ(3)")
+    on_iter = (n, v, t) -> (ζ_ref[] = v; n_ref[] = n; t_ref[] = t; tui_on_iter(n, v, t))
 
     summary = () -> string("iter = ", n_ref[],
                            "  t = ", round(t_ref[], digits = 2), "s",
                            "  digits = ", digits_of(ζ_ref[]))
 
-    with_graceful_interrupt(on_interrupt = prompt_show(() -> ζ_ref[], label = "ζ(3)", summary = summary)) do
-        zeta3_apery(stream = true, on_iter = on_iter)
+    handler = function()
+        stop_tui!()
+        prompt_show(() -> ζ_ref[], label = "ζ(3)", summary = summary)()
+    end
+
+    try
+        with_graceful_interrupt(on_interrupt = handler) do
+            zeta3_apery(stream = true, on_iter = on_iter)
+        end
+    finally
+        stop_tui!()
     end
 end

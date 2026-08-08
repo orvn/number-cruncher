@@ -44,7 +44,6 @@ function sqrt_newton(n; digits::Union{Int,Nothing} = 100,
         end
     end
 
-    on_iter !== nothing && println()
     return x
 end
 
@@ -64,14 +63,23 @@ if abspath(PROGRAM_FILE) == @__FILE__
     x_ref = Ref{BigFloat}(BigFloat(0))
     k_ref = Ref(0)
     t_ref = Ref(0.0)
-    tui = tui_callback(every = 1, label = label_str)
-    on_iter = (k, v, t) -> (x_ref[] = v; k_ref[] = k; t_ref[] = t; tui(k, v, t))
+    tui_on_iter, stop_tui! = tui_start(every = 1, label = label_str)
+    on_iter = (k, v, t) -> (x_ref[] = v; k_ref[] = k; t_ref[] = t; tui_on_iter(k, v, t))
 
     summary = () -> string("iter = ", k_ref[],
                            "  t = ", round(t_ref[], digits = 2), "s",
                            "  digits = ", digits_of(x_ref[]))
 
-    with_graceful_interrupt(on_interrupt = prompt_show(() -> x_ref[], label = label_str, summary = summary)) do
-        sqrt_newton(n, stream = true, on_iter = on_iter)
+    handler = function()
+        stop_tui!()
+        prompt_show(() -> x_ref[], label = label_str, summary = summary)()
+    end
+
+    try
+        with_graceful_interrupt(on_interrupt = handler) do
+            sqrt_newton(n, stream = true, on_iter = on_iter)
+        end
+    finally
+        stop_tui!()
     end
 end
