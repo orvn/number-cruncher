@@ -73,37 +73,19 @@ function π_chud(; digits::Union{Int,Nothing} = 100,
     return π_current
 end
 
-include("runtime/tui.jl")
-include("runtime/interrupt.jl")
+include("runtime/stream.jl")
 
 # usage
-#   π_chud(digits = 200)                                          # silent, returns value
-#   π_chud(digits = 500, on_iter = tui_callback(every = 1))       # target accuracy w/ TUI
-#   π_chud(stream = true, on_iter = tui_callback(every = 5))      # stream forever w/ TUI
-#   π_chud(stream = true, max_iters = 500,
-#          on_iter = tui_callback(every = 10, show_banner = false))
+#   π_chud(digits = 200)                         # silent, returns value
+#   render(label = "π") do on_iter, _
+#       π_chud(digits = 500, on_iter = on_iter)  # target accuracy w/ TUI
+#   end
+#   stream(label = "π") do on_iter
+#       π_chud(stream = true, on_iter = on_iter) # stream forever
+#   end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    π_ref = Ref{BigFloat}(BigFloat(0))
-    k_ref = Ref(0)
-    t_ref = Ref(0.0)
-    tui_on_iter, stop_tui! = tui_start(every = 5)
-    on_iter = (k, p, e) -> (π_ref[] = p; k_ref[] = k; t_ref[] = e; tui_on_iter(k, p, e))
-
-    summary = () -> string("iter = ", k_ref[],
-                           "  t = ", round(t_ref[], digits = 2), "s",
-                           "  digits = ", digits_of(π_ref[]))
-
-    handler = function()
-        stop_tui!()
-        prompt_show(() -> π_ref[], label = "π", summary = summary)()
-    end
-
-    try
-        with_graceful_interrupt(on_interrupt = handler) do
-            π_chud(stream = true, on_iter = on_iter)
-        end
-    finally
-        stop_tui!()
+    stream(label = "π") do on_iter
+        π_chud(stream = true, on_iter = on_iter)
     end
 end
