@@ -76,3 +76,12 @@ end
 ```
 
 The `on_iter` callback must have signature of the form `(k::Int, v::BigFloat, t::Float64)`
+
+### Tests
+
+Test the first 50 digits of each constant, `√n·√n ≈ n`,
+perfect-square exact convergence and the two most-used TUI helpers with `test-calcs.jl`
+
+```zsh
+julia test/test-calcs.jl
+```
