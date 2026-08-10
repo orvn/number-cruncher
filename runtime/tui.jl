@@ -154,6 +154,7 @@ function tui_start(; every::Int = 1, io::IO = stdout, show_banner::Bool = true,
         lock(snap_lock) do
             snapshot[] = (k, v, elapsed)
         end
+        yield() # allow the renderer a chance to proceed
     end
 
     stop! = function()

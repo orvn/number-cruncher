@@ -6,14 +6,19 @@ A collection of calculations and proofs on series, especially those that converg
 
 ## Usage
 
-Assuming Julia is installed, simply call a file like:
+Assuming Julia is installed, call a file like:
 
 ```zsh
-julia chudnovsky-pi.jl   # π via Chudnovsky
-julia euler-e.jl         # e via Taylor series
-julia heron-root.jl      # √2 via Heron's method
-julia newton-root.jl     # √n via Newton's method (prompts for n)
+julia --threads=auto chudnovsky-pi.jl   # π via Chudnovsky
+julia --threads=auto euler-e.jl         # e via Taylor series
+julia --threads=auto heron-root.jl      # √2 via Heron's method
+julia --threads=auto newton-root.jl     # √n via Newton's method
+julia --threads=auto apery-zeta.jl      # ζ(3) via Apery's series
 ```
+
+Simply running like `julia euler-e.jl` also works, but `--threads=auto` allows the streaming TUI renderer to be put on a background thread so compute isn't blocked by terminal i/o.
+
+At minimum, it is recommended to run with two threads: `julia -t=2 euler-e.jl`.
 
 ### Use as a library
 
