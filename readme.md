@@ -9,69 +9,70 @@ A collection of calculations and proofs on series, especially those that converg
 Assuming Julia is installed, call a file like:
 
 ```zsh
-julia --threads=auto chudnovsky-pi.jl   # π via Chudnovsky
-julia --threads=auto euler-e.jl         # e via Taylor series
-julia --threads=auto heron-root.jl      # √2 via Heron's method
-julia --threads=auto newton-root.jl     # √n via Newton's method
-julia --threads=auto apery-zeta.jl      # ζ(3) via Apery's series
+julia -t 2 chudnovsky-pi.jl   # π via Chudnovsky
+julia -t 2 euler-e.jl         # e via Taylor series
+julia -t 2 heron-root.jl      # √2 via Heron's method
+julia -t 2 newton-root.jl     # √n via Newton's method
+julia -t 2 apery-zeta.jl      # ζ(3) via Apery's series
 ```
 
-Simply running like `julia euler-e.jl` also works, but `--threads=auto` allows the streaming TUI renderer to be put on a background thread so compute isn't blocked by terminal i/o.
+Simply running like `julia euler-e.jl` also works, but `-t 2` allows the streaming TUI renderer to be put on a background thread so compute isn't blocked by terminal i/o.
 
-At minimum, it is recommended to run with two threads: `julia -t=2 euler-e.jl`.
+At minimum, it is recommended to run with two threads, however _auto_ mode may also be used `julia --threads=auto euler-e.jl`, which determines thread quantity based on the local machine.
 
 ### Use as a library
 
+A few examples of usage as a drop-in library:
 ```julia
 include("chudnovsky-pi.jl")
 
 π_chud(digits = 200)
-π_chud(digits = 500, on_iter = tui_callback(every = 1))
-π_chud(stream = true, on_iter = tui_callback(every = 10))
+
+render(label = "π") do on_iter, _
+    π_chud(digits = 500, on_iter = on_iter)  # target 500 digits
+end
+
+stream(label = "π") do on_iter
+    π_chud(stream = true, on_iter = on_iter) # stream until interrupt
+end
 π_chud(stream = true, max_iters = 500)
-```
-
-```julia
-include("euler-e.jl")
-
-e_taylor(digits = 200)                                                   
-e_taylor(digits = 500, on_iter = tui_callback(every = 1, label = "e"))   
-e_taylor(stream = true, on_iter = tui_callback(every = 5, label = "e"))
-```
-
-```julia
-include("heron-root.jl")
-
-sqrt2_heron(digits = 200)
-sqrt2_heron(digits = 500, on_iter = tui_callback(every = 1, label = "√2"))
-sqrt2_heron(stream = true, on_iter = tui_callback(every = 1, label = "√2"))
 ```
 
 ```julia
 include("newton-root.jl")
 
 sqrt_newton(3, digits = 200)
-sqrt_newton(7, digits = 500, on_iter = tui_callback(every = 1, label = "√7"))
-sqrt_newton(π, stream = true, on_iter = tui_callback(every = 1, label = "√π"))
+
+render(label = "√7") do on_iter, _
+    sqrt_newton(7, digits = 500, on_iter = on_iter)
+end
+
+stream(label = "√π") do on_iter
+    sqrt_newton(π, stream = true, on_iter = on_iter)
+end
 ```
 
-These share the same kwarg shape:
+All of these share the same kwarg shape:
 
-- `digits::Int` — target decimal digits (default `100`)
-- `stream::Bool` — keep refining past target (default `false`)
-- `max_iters::Union{Int,Nothing}` — hard cap (default `nothing`)
-- `on_iter::Function` — optional callback `(k, value, elapsed_seconds)`
+- `digits::Int`: target decimal digits (default `100`)
+- `stream::Bool`: keep refining past target (default `false`)
+- `max_iters::Union{Int,Nothing}`: ceiling (default `nothing`)
+- `on_iter::Function`: optional callback `(k, value, elapsed_seconds)`
 
 ### Files
 
-- `runtime/tui.jl` width-aware terminal interface design file. `tui_callback` takes an optional `label` kwarg (default `"π"`) so the second output line renders `<label> = ...`
-- `runtime/interrupt.jl` — interruption handler
+- `runtime/loop.jl`: `background_loop` primitive, a pseudo-event-based system
+- `runtime/tui.jl`: width-aware two-line rendering; `tui_start` (raw) and `render` (block)
+- `runtime/interrupt.jl`: `with_graceful_interrupt` and `prompt_show`
+- `runtime/stream.jl`: `stream` block that composes TUI
 
-Example invocation for other calculations
+Reusing the harness for a new calculation example:
 ```julia
-val_ref = Ref{BigFloat}(BigFloat(0))
-tui = tui_callback(every = 5, label = "x")
-with_graceful_interrupt(on_interrupt = prompt_show(() -> val_ref[], label = "x")) do
-    my_calc(on_iter = (k, v, t) -> (val_ref[] = v; tui(k, v, t)))
+include("runtime/stream.jl")
+
+stream(label = "x") do on_iter
+    my_calc(stream = true, on_iter = on_iter)
 end
 ```
+
+The `on_iter` callback must have signature of the form `(k::Int, v::BigFloat, t::Float64)`
