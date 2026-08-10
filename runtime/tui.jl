@@ -1,17 +1,15 @@
 # Streaming TUI
 #
 # Two APIs:
-#   tui_callback(...)     synchronous, returns a closure suitable for `on_iter`
-#                         (renders inline on the compute thread — legacy shape)
-#   tui_start(...)        decoupled, returns (on_iter, stop!) — the callback
-#                         only updates a snapshot; a background task renders
-#                         at fixed cadence (Threads.@spawn if nthreads > 1)
+#   tui_start(...)      returns (on_iter, stop!) — snapshot + background renderer
+#   render(...) do      block form: sets up + tears down automatically
 #
-# Rendering: two lines, redrawn in place
-#   iter = 1770  t = 3.5s
-#   π = <leading 32> … {aggregate: N digits} … <trailing 256>
+# Compute callback (on_iter) is cheap, it updates a shared snapshot, a background task (Threads.@spawn if nthreads > 1, else @async) renders at fixed cadence (interval_s) 
+# Rendering: two lines, redrawn in place:
+#  iter = 1770  t = 3.5s
+#  π = <leading 32> … {aggregate: N digits} … <trailing 256>
 
-include("render.jl")
+include("loop.jl")
 
 const ANSI_RESET   = "\e[0m"
 const ANSI_DIM     = "\e[2m"
@@ -33,12 +31,12 @@ end
 # decimal digits held by a BigFloat at its current precision
 digits_of(x::BigFloat) = floor(Int, precision(x) * log10(2))
 
-# returns (plain, colored): plain used for width math, colored for output
-const AGGREGATE_FLOOR = 200  # if below, skip leading/aggregate/trailing structure
+# below digit floor, skip leading/aggregate/trailing structure
+const AGGREGATE_FLOOR = 200
 
-function format_π(π::BigFloat, cols::Int)
-    s = string(π)
-    total = digits_of(π)
+function format_value(v::BigFloat, cols::Int)
+    s = string(v)
+    total = digits_of(v)
 
     if total < AGGREGATE_FLOOR
         display = length(s) <= cols ? s : first(s, cols)
@@ -71,7 +69,6 @@ function format_π(π::BigFloat, cols::Int)
 end
 
 # One frame draw
-# Used by both tui_callback (synchronous) and tui_start (decoupled)
 function _render_frame(io::IO, k::Int, v::BigFloat, elapsed::Float64,
                        first_render::Ref{Bool}, color::Bool,
                        label::AbstractString, show_banner::Bool)
@@ -91,7 +88,7 @@ function _render_frame(io::IO, k::Int, v::BigFloat, elapsed::Float64,
 
     prefix_plain = string(label, " = ")
     prefix = color ? wrap(prefix_plain, ANSI_DIM) : prefix_plain
-    plain_body, colored_body = format_π(v, max(cols - length(prefix_plain) - 1, 20))
+    plain_body, colored_body = format_value(v, max(cols - length(prefix_plain) - 1, 20))
     body = color ? colored_body : plain_body
 
     pad1 = max(0, cols - 1 - length(line1_plain))
@@ -102,30 +99,15 @@ function _render_frame(io::IO, k::Int, v::BigFloat, elapsed::Float64,
     first_render[] = false
 end
 
-# Synchronous callback (renders on the compute thread)
-# Preserves the pre-decoupling behavior for callers that haven't migrated
-function tui_callback(; every::Int = 1, io::IO = stdout, show_banner::Bool = true,
-                        color::Bool = true, label::AbstractString = "π")
-    first_render = Ref(true)
-    return function(k::Int, v::BigFloat, elapsed::Float64)
-        (k != 0 && k % every != 0) && return
-        _render_frame(io, k, v, elapsed, first_render, color, label, show_banner)
-    end
-end
-
-# Decoupled two-piece API
-#
+# Snapshot + background renderer
 # Returns (on_iter, stop!)
-#   on_iter(k, v, elapsed)  cheap: just updates the shared snapshot under a lock
-#   stop!()                 halts the background task, renders one final frame,
-#                           emits the trailing newline (idempotent)
+#   on_iter(k, v, elapsed)  cheap: updates the shared snapshot under a lock
+#   stop!()                 halts renderer, draws final frame, emits trailing
+#                           newline (idempotent)
 #
-# The renderer runs on Threads.@spawn when nthreads > 1 for real parallelism,
-# else @async as a cooperative fallback
-#
-# `every` here means minimum k-delta between rendered frames — prevents
-# repainting the same snapshot when compute is slower than interval_s
-function tui_start(; every::Int = 1, io::IO = stdout, show_banner::Bool = true,
+# Threads.@spawn parallel path when nthreads > 1, else @async cooperative
+# (compute's yield() inside on_iter gives the renderer a chance to run)
+function tui_start(; io::IO = stdout, show_banner::Bool = true,
                      color::Bool = true, label::AbstractString = "π",
                      interval_s::Float64 = 1/30)
 
@@ -141,7 +123,7 @@ function tui_start(; every::Int = 1, io::IO = stdout, show_banner::Bool = true,
         end
         snap === nothing && return
         k, v, elapsed = snap
-        if !force && !first_render[] && k - last_rendered_k[] < every
+        if !force && k == last_rendered_k[]
             return
         end
         last_rendered_k[] = k
@@ -154,16 +136,26 @@ function tui_start(; every::Int = 1, io::IO = stdout, show_banner::Bool = true,
         lock(snap_lock) do
             snapshot[] = (k, v, elapsed)
         end
-        yield() # allow the renderer a chance to proceed
+        yield()  # let the renderer run if ready (see module docstring)
     end
 
     stop! = function()
         stopped[] && return
         stopped[] = true
-        stop_bg()          # halt loop and wait for the in-flight render (if any)
-        do_render(true)    # guarantee the last snapshot is on screen
-        println(io)        # trailing newline so shell prompt lands cleanly
+        stop_bg()
+        do_render(true)
+        println(io)
     end
 
     return on_iter, stop!
+end
+
+# Block form: sets up tui_start, calls the body with (on_iter, stop!), guarantees teardown even on exception
+function render(body; kwargs...)
+    on_iter, stop! = tui_start(; kwargs...)
+    try
+        return body(on_iter, stop!)
+    finally
+        stop!()
+    end
 end

@@ -47,35 +47,15 @@ function sqrt2_heron(; digits::Union{Int,Nothing} = 100,
     return x
 end
 
-include("runtime/tui.jl")
-include("runtime/interrupt.jl")
+include("runtime/stream.jl")
 
 # usage e.g.
 #  sqrt2_heron(digits = 200)
-#  sqrt2_heron(digits = 500, on_iter = tui_callback(every = 1, label = "√2"))
-#  sqrt2_heron(stream = true, on_iter = tui_callback(every = 1, label = "√2"))
+#  render(label = "√2") do on_iter, _ ; sqrt2_heron(digits = 500, on_iter = on_iter) ; end
+#  stream(label = "√2") do on_iter ; sqrt2_heron(stream = true, on_iter = on_iter) ; end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    x_ref = Ref{BigFloat}(BigFloat(0))
-    k_ref = Ref(0)
-    t_ref = Ref(0.0)
-    tui_on_iter, stop_tui! = tui_start(every = 1, label = "√2")
-    on_iter = (k, v, t) -> (x_ref[] = v; k_ref[] = k; t_ref[] = t; tui_on_iter(k, v, t))
-
-    summary = () -> string("iter = ", k_ref[],
-                           "  t = ", round(t_ref[], digits = 2), "s",
-                           "  digits = ", digits_of(x_ref[]))
-
-    handler = function()
-        stop_tui!()
-        prompt_show(() -> x_ref[], label = "√2", summary = summary)()
-    end
-
-    try
-        with_graceful_interrupt(on_interrupt = handler) do
-            sqrt2_heron(stream = true, on_iter = on_iter)
-        end
-    finally
-        stop_tui!()
+    stream(label = "√2") do on_iter
+        sqrt2_heron(stream = true, on_iter = on_iter)
     end
 end
