@@ -12,7 +12,7 @@ Assuming Julia is installed, call a file like:
 julia -t 2 chudnovsky-pi.jl   # π via Chudnovsky
 julia -t 2 euler-e.jl         # e via Taylor series
 julia -t 2 heron-root.jl      # √2 via Heron's method
-julia -t 2 newton-root.jl     # √n via Newton's method
+julia -t 2 newton-root.jl     # kth root of n via Newton's method
 julia -t 2 apery-zeta.jl      # ζ(3) via Apery's series
 ```
 
@@ -41,14 +41,15 @@ end
 ```julia
 include("newton-root.jl")
 
-sqrt_newton(3, digits = 200)
+newton_root(3, 2, digits = 200)       # √3
+newton_root(27, 3, digits = 200)      # ∛27
 
 render(label = "√7") do on_iter, _
-    sqrt_newton(7, digits = 500, on_iter = on_iter)
+    newton_root(7, 2, digits = 500, on_iter = on_iter)
 end
 
 stream(label = "√π") do on_iter
-    sqrt_newton(π, stream = true, on_iter = on_iter)
+    newton_root(π, 2, stream = true, on_iter = on_iter)
 end
 ```
 

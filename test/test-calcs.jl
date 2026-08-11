@@ -25,17 +25,26 @@ leading52(x::BigFloat) = first(string(x), 52)
         @test leading52(zeta3_apery(digits = 100)) == ZETA3_52
     end
 
-    @testset "newton-root — √n · √n ≈ n" begin
-        for n in [2, 3, 5, 7, 11, 42]
-            x = sqrt_newton(n, digits = 100)
-            @test abs(x^2 - BigFloat(n)) < BigFloat(10)^-90
+    @testset "newton-root — x^k ≈ n" begin
+        for (n, k) in [(2,2), (3,2), (5,2), (11,2), (2,3), (5,3), (20,3), (7,4), (3,5), (2,10)]
+            x = newton_root(n, k, digits = 100)
+            @test abs(x^k - BigFloat(n)) < BigFloat(10)^-90
         end
     end
 
-    @testset "newton-root — perfect squares converge exactly" begin
-        @test sqrt_newton(9,   digits = 50) == BigFloat(3)
-        @test sqrt_newton(16,  digits = 50) == BigFloat(4)
-        @test sqrt_newton(100, digits = 50) == BigFloat(10)
+    @testset "newton-root — perfect kth powers converge exactly" begin
+        @test newton_root(9,   2, digits = 50) == BigFloat(3)
+        @test newton_root(16,  2, digits = 50) == BigFloat(4)
+        @test newton_root(100, 2, digits = 50) == BigFloat(10)
+        @test newton_root(8,   3, digits = 50) == BigFloat(2)
+        @test newton_root(27,  3, digits = 50) == BigFloat(3)
+        @test newton_root(81,  4, digits = 50) == BigFloat(3)
+        @test newton_root(32,  5, digits = 50) == BigFloat(2)
+    end
+
+    @testset "newton-root — sqrt_newton alias" begin
+        @test sqrt_newton(9, digits = 50) == BigFloat(3)
+        @test abs(sqrt_newton(2, digits = 100)^2 - BigFloat(2)) < BigFloat(10)^-90
     end
 
     @testset "humanize_digits boundaries" begin
