@@ -1,7 +1,7 @@
 # Streaming TUI
 #
 # Two APIs:
-#   tui_start(...)      returns (on_iter, stop!) — snapshot + background renderer
+#   tui_start(...)      returns (on_iter, stop!): snapshot + background renderer
 #   render(...) do      block form: sets up + tears down automatically
 #
 # Compute callback (on_iter) is cheap, it updates a shared snapshot, a background task (Threads.@spawn if nthreads > 1, else @async) renders at fixed cadence (interval_s) 

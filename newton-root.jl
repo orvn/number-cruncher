@@ -19,12 +19,20 @@ function newton_root(n, k::Int = 2; digits::Union{Int,Nothing} = 100,
     # on_iter: optional callback (i, x_current, elapsed_seconds)
 
     k >= 1 || error("k must be ≥ 1")
+    n < 0 && iseven(k) && error("even root of a negative number is not real")
 
     prec_digits = digits === nothing ? 32 : digits
     setprecision(ceil(Int, prec_digits * log2(10)) + 32)
 
+    # prevent division by zero
+    if n == 0
+        on_iter !== nothing && on_iter(0, BigFloat(0), 0.0)
+        return BigFloat(0)
+    end
+
     n_big = BigFloat(n)
-    x = BigFloat(Float64(n)^(1/k))  # good Float64-precision seed
+    seed = Float64(abs(n))^(1/k)  # good Float64-precision seed
+    x = BigFloat(n < 0 ? -seed : seed)
     x_prev = BigFloat(0)
     i = 0
     t0 = time()

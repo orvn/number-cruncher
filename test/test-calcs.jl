@@ -18,21 +18,21 @@ leading52(x::BigFloat) = first(string(x), 52)
 
 @testset "number-cruncher" begin
 
-    @testset "known constants — first 50 digits" begin
+    @testset "known constants: first 50 digits" begin
         @test leading52(π_chud(digits = 100))      == PI_52
         @test leading52(e_taylor(digits = 100))    == E_52
         @test leading52(sqrt2_heron(digits = 100)) == SQRT2_52
         @test leading52(zeta3_apery(digits = 100)) == ZETA3_52
     end
 
-    @testset "newton-root — x^k ≈ n" begin
+    @testset "newton-root: x^k ≈ n" begin
         for (n, k) in [(2,2), (3,2), (5,2), (11,2), (2,3), (5,3), (20,3), (7,4), (3,5), (2,10)]
             x = newton_root(n, k, digits = 100)
             @test abs(x^k - BigFloat(n)) < BigFloat(10)^-90
         end
     end
 
-    @testset "newton-root — perfect kth powers converge exactly" begin
+    @testset "newton-root: perfect kth powers converge exactly" begin
         @test newton_root(9,   2, digits = 50) == BigFloat(3)
         @test newton_root(16,  2, digits = 50) == BigFloat(4)
         @test newton_root(100, 2, digits = 50) == BigFloat(10)
@@ -42,7 +42,18 @@ leading52(x::BigFloat) = first(string(x), 52)
         @test newton_root(32,  5, digits = 50) == BigFloat(2)
     end
 
-    @testset "newton-root — sqrt_newton alias" begin
+    @testset "newton-root: zero and negative n" begin
+        @test newton_root(0,   2, digits = 50) == BigFloat(0)
+        @test newton_root(0,   5, digits = 50) == BigFloat(0)
+        @test newton_root(-8,  3, digits = 50) == BigFloat(-2)
+        @test newton_root(-27, 3, digits = 50) == BigFloat(-3)
+        @test newton_root(-32, 5, digits = 50) == BigFloat(-2)
+        @test abs(newton_root(-2, 3, digits = 100)^3 + BigFloat(2)) < BigFloat(10)^-90
+        @test_throws ErrorException newton_root(-4, 2)
+        @test_throws ErrorException newton_root(-16, 4)
+    end
+
+    @testset "newton-root: sqrt_newton alias" begin
         @test sqrt_newton(9, digits = 50) == BigFloat(3)
         @test abs(sqrt_newton(2, digits = 100)^2 - BigFloat(2)) < BigFloat(10)^-90
     end
@@ -56,7 +67,7 @@ leading52(x::BigFloat) = first(string(x), 52)
         @test humanize_digits(1_500_000_000_000) == "1.5T"
     end
 
-    @testset "format_value — floor threshold" begin
+    @testset "format_value: floor threshold" begin
         # below floor
         setprecision(100)  # ~30 decimal places
         plain, _ = format_value(BigFloat(1) / BigFloat(3), 120)
