@@ -12,7 +12,9 @@ Assuming Julia is installed, call a file like:
 julia -t 2 chudnovsky-pi.jl   # π via Chudnovsky
 julia -t 2 euler-e.jl         # e via Taylor series
 julia -t 2 heron-root.jl      # √2 via Heron's method
-julia -t 2 newton-root.jl     # kth root of n via Newton's method
+julia -t 2 newton-root.jl     # kth root of n via Newton's method (prompts for n, k)
+julia -t 2 newton-root.jl 5   # √5 (k defaults to 2)
+julia -t 2 newton-root.jl 8 3 # ∛8
 julia -t 2 apery-zeta.jl      # ζ(3) via Apery's series
 ```
 

@@ -76,11 +76,19 @@ function root_label(n::Real, k::Int)
 end
 
 if abspath(PROGRAM_FILE) == @__FILE__
-    print("n = ")
-    n = parse(Float64, readline())
-    print("k = (default 2) ")
-    kline = strip(readline())
-    k = isempty(kline) ? 2 : parse(Int, kline)
+    # accept `julia newton-root.jl <n> [k]` or fall back to interactive prompts
+    n, k = if !isempty(ARGS)
+        n_arg = parse(Float64, ARGS[1])
+        k_arg = length(ARGS) >= 2 ? parse(Int, ARGS[2]) : 2
+        (n_arg, k_arg)
+    else
+        print("n = ")
+        n_in = parse(Float64, readline())
+        print("k = (default 2) ")
+        kline = strip(readline())
+        k_in = isempty(kline) ? 2 : parse(Int, kline)
+        (n_in, k_in)
+    end
 
     stream(label = root_label(n, k)) do on_iter
         newton_root(n, k, stream = true, on_iter = on_iter)
